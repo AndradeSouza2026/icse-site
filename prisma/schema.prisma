@@ -1,0 +1,271 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------
+// Usuários Administrativos e Auditoria
+// ---------------------------------------------
+
+model User {
+  id           String     @id @default(uuid())
+  name         String
+  email        String     @unique
+  passwordHash String
+  role         String     @default("EDITOR") // "ADMIN" | "EDITOR"
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  auditLogs    AuditLog[]
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  userName  String?
+  action    String
+  resource  String
+  details   String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([action])
+  @@index([createdAt])
+}
+
+// ---------------------------------------------
+// Configurações Institucionais
+// ---------------------------------------------
+
+model SiteSetting {
+  id             String   @id @default("singleton")
+  siteName       String   @default("ICSE — Instituto Centro Social Elcimar")
+  tagline        String   @default("Juntos por uma sociedade melhor!")
+  cnpj           String   @default("97.542.996/0001-07")
+  foundationDate String   @default("04 de outubro de 2009")
+  registryInfo   String   @default("RCPJ Comarca da Capital do RJ sob nº 26203")
+  address        String   @default("Avenida Dr. Sérgio Vieira de Melo, nº 55, Lagomar, Macaé — RJ, CEP 27966-620")
+  email          String   @default("contato@icse.org.br")
+  phone          String   @default("(22) 99999-9999")
+  whatsapp       String   @default("(22) 99999-9999")
+  workingHours   String   @default("Segunda a Sexta, das 08h às 17h")
+  instagram      String?  @default("https://instagram.com")
+  facebook       String?  @default("https://facebook.com")
+  youtube        String?  @default("https://youtube.com")
+  heroTitle      String   @default("Transformando vidas, fortalecendo comunidades")
+  heroSubtitle   String   @default("Educação, inclusão e desenvolvimento social para construir novas oportunidades no Estado do Rio de Janeiro.")
+  aboutSummary   String   @default("O ICSE — Instituto Centro Social Elcimar é uma associação privada sem fins lucrativos, 100% social, com princípios de utilidade pública, legalidade e transparência.")
+  mission        String   @default("Promover a transformação social, educacional e comunitária por meio de programas de qualificação profissional, inclusão, saúde preventiva, esporte e preservação ambiental.")
+  vision         String   @default("Ser referência regional e estadual em impacto social inclusivo, cidadania ativa e fortalecimento comunitário até 2030.")
+  values         String   @default("Ética, Transparência, Solidariedade, Respeito à Diversidade, Cidadania, Eficiência e Compromisso Comunitário.")
+  updatedAt      DateTime @updatedAt
+}
+
+// ---------------------------------------------
+// Áreas de Atuação
+// ---------------------------------------------
+
+model Area {
+  id             String    @id @default(uuid())
+  slug           String    @unique
+  name           String
+  icon           String    @default("BookOpen")
+  colorClass     String    @default("blue")
+  summary        String
+  description    String
+  targetAudience String
+  order          Int       @default(0)
+  active         Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  projects       Project[]
+
+  @@index([order])
+}
+
+// ---------------------------------------------
+// Projetos Sociais
+// ---------------------------------------------
+
+model Project {
+  id             String    @id @default(uuid())
+  slug           String    @unique
+  title          String
+  summary        String
+  description    String
+  targetAudience String
+  location       String    @default("Macaé - RJ e Região")
+  status         String    @default("PLANEJADO") // "PLANEJADO" | "EM_ANDAMENTO" | "CONCLUIDO" | "ARQUIVADO"
+  coverImage     String?
+  startDate      DateTime?
+  endDate        DateTime?
+  isFeatured     Boolean   @default(false)
+  areaId         String
+  area           Area      @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([status])
+  @@index([areaId])
+}
+
+// ---------------------------------------------
+// Cursos e Oportunidades
+// ---------------------------------------------
+
+model Course {
+  id               String             @id @default(uuid())
+  slug             String             @unique
+  title            String
+  summary          String
+  description      String
+  workload         String?
+  modality         String             @default("PRESENCIAL") // "PRESENCIAL" | "ONLINE" | "HIBRIDO"
+  location         String             @default("Sede ICSE - Lagomar, Macaé/RJ")
+  requirements     String?
+  totalSlots       Int?
+  enrollmentPeriod String?
+  status           String             @default("EM_BREVE") // "INSCRICOES_ABERTAS" | "INSCRICOES_ENCERRADAS" | "EM_BREVE" | "ARQUIVADO"
+  startDate        DateTime?
+  endDate          DateTime?
+  isFeatured       Boolean            @default(false)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  enrollments      CourseEnrollment[]
+
+  @@index([status])
+}
+
+model CourseEnrollment {
+  id               String   @id @default(uuid())
+  courseId         String
+  course           Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  fullName         String
+  email            String
+  phone            String
+  dateOfBirth      String?
+  city             String?  @default("Macaé")
+  neighborhood     String?
+  educationalLevel String?
+  observation      String?
+  status           String   @default("PENDENTE") // "PENDENTE" | "CONFIRMADO" | "LISTA_ESPERA" | "CANCELADO"
+  termsAccepted    Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([courseId])
+  @@index([status])
+}
+
+// ---------------------------------------------
+// Notícias e Comunicados
+// ---------------------------------------------
+
+model News {
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  title       String
+  subtitle    String?
+  content     String
+  coverImage  String?
+  category    String   @default("Institucional")
+  author      String   @default("Comunicação ICSE")
+  status      String   @default("PUBLICADO") // "RASCUNHO" | "PUBLICADO"
+  publishedAt DateTime @default(now())
+  views       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status])
+  @@index([category])
+}
+
+// ---------------------------------------------
+// Documentos Institucionais e Transparência
+// ---------------------------------------------
+
+model Document {
+  id              String   @id @default(uuid())
+  title           String
+  description     String
+  category        String   @default("ESTATUTO") // "ESTATUTO" | "RELATORIO_ANUAL" | "PRESTACAO_CONTAS" | "ATAS" | "EDITAIS" | "OUTROS"
+  fileUrl         String
+  fileType        String   @default("PDF")
+  fileSize        String?  @default("1.2 MB")
+  publicationDate DateTime @default(now())
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([category])
+}
+
+// ---------------------------------------------
+// Voluntariado
+// ---------------------------------------------
+
+model VolunteerApplication {
+  id              String   @id @default(uuid())
+  fullName        String
+  email           String
+  phone           String?
+  areasOfInterest String
+  availability    String
+  motivation      String?
+  status          String   @default("NOVO") // "NOVO" | "EM_ANALISE" | "CONTATADO" | "ARQUIVADO"
+  internalNotes   String?
+  termsAccepted   Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status])
+}
+
+// ---------------------------------------------
+// Parcerias
+// ---------------------------------------------
+
+model PartnerProposal {
+  id               String   @id @default(uuid())
+  organizationName String
+  contactPerson    String
+  email            String
+  phone            String
+  cnpj             String?
+  areaOfInterest   String
+  proposalType     String
+  message          String
+  status           String   @default("NOVO") // "NOVO" | "EM_ANALISE" | "EM_REUNIAO" | "FORMALIZADO" | "RECUSADO"
+  internalNotes    String?
+  termsAccepted    Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([status])
+}
+
+// ---------------------------------------------
+// Contato
+// ---------------------------------------------
+
+model ContactMessage {
+  id            String   @id @default(uuid())
+  name          String
+  email         String
+  phone         String?
+  subject       String
+  message       String
+  status        String   @default("NOVA") // "NOVA" | "LIDA" | "RESPONDIDA" | "ARQUIVADA"
+  internalNotes String?
+  termsAccepted Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status])
+}
+
